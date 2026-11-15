@@ -19,13 +19,13 @@
     },
     "refusal_explanation": null,
     "nearest_safe_target": null,
-    "created_at": "2026-11-16T00:07:57.871083"
+    "created_at": "2026-11-16T01:31:26.133007"
   },
   "rank": 1,
-  "level": 1,
-  "tokens": 1,
+  "level": 2,
+  "tokens": 2,
   "xp": 100,
-  "cycle_completed_days": 0,
+  "cycle_completed_days": 1,
   "boss_wins": 0,
   "exercise_personal_records": {
     "ex_bench_press": 101.3
@@ -43,7 +43,7 @@
       "fibre_logged": 2.5,
       "exercise_logs": [
         {
-          "id": "bbe9c015",
+          "id": "7e12056d",
           "category": "weightlifting",
           "exercise_id": "ex_bench_press",
           "exercise_name": "Barbell Flat Bench Press",
@@ -54,12 +54,12 @@
           "steps_count": null,
           "calisthenics_reps": null,
           "epley_1rm": 101.3,
-          "timestamp": "2026-11-16T00:07:57.993532"
+          "timestamp": "2026-11-16T01:31:26.229368"
         }
       ],
       "food_logs": [
         {
-          "id": "6e498e33",
+          "id": "33178e8c",
           "food_id": "food_paneer_raw",
           "name": "Fresh Paneer (Raw)",
           "portion_g": 150.0,
@@ -68,11 +68,11 @@
           "carbs_g": 5.1,
           "fat_g": 31.2,
           "fibre_g": 0.0,
-          "timestamp": "2026-11-16T00:07:58.038476"
+          "timestamp": "2026-11-16T01:31:26.279421"
         },
         {
-          "id": "c0137b00",
-          "food_id": "custom_2a942007",
+          "id": "4a9dec71",
+          "food_id": "custom_a640b0e4",
           "name": "High Protein Moong Paneer Bowl",
           "portion_g": 105.0,
           "calories": 230.0,
@@ -80,22 +80,57 @@
           "carbs_g": 11.2,
           "fat_g": 15.6,
           "fibre_g": 2.5,
-          "timestamp": "2026-11-16T00:07:58.103050"
+          "timestamp": "2026-11-16T01:31:26.327103"
         }
       ],
       "mindful_logs": [
         {
-          "id": "39000289",
+          "id": "2da37fb9",
           "activity_id": "mind_breath_box",
           "name": "Box Breathing (4-4-4-4 Rhythm)",
           "duration_min": 10,
-          "timestamp": "2026-11-16T00:07:58.169172"
+          "timestamp": "2026-11-16T01:31:26.373126"
         }
       ],
       "tokens_spent_today": 4,
       "is_planned_rest": true,
       "xp_earned_today": 0
+    },
+    "2026-11-17": {
+      "date": "2026-11-17",
+      "exercise_completed": false,
+      "mindful_completed": false,
+      "nutrition_completed": false,
+      "calories_logged": 0.0,
+      "protein_logged": 0.0,
+      "carbs_logged": 0.0,
+      "fat_logged": 0.0,
+      "fibre_logged": 0.0,
+      "exercise_logs": [],
+      "food_logs": [],
+      "mindful_logs": [],
+      "tokens_spent_today": 0,
+      "is_planned_rest": false,
+      "xp_earned_today": 0
+    },
+    "2026-11-18": {
+      "date": "2026-11-18",
+      "exercise_completed": false,
+      "mindful_completed": false,
+      "nutrition_completed": false,
+      "calories_logged": 0.0,
+      "protein_logged": 0.0,
+      "carbs_logged": 0.0,
+      "fat_logged": 0.0,
+      "fibre_logged": 0.0,
+      "exercise_logs": [],
+      "food_logs": [],
+      "mindful_logs": [],
+      "tokens_spent_today": 0,
+      "is_planned_rest": false,
+      "xp_earned_today": 0
     }
   },
-  "simulated_date": "2026-11-16"
+  "simulated_date": "2026-11-18",
+  "consecutive_unexcused_misses": 1
 }
