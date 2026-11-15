@@ -40,6 +40,13 @@ export async function fetchCatalogue() {
   return res.json();
 }
 
+export async function fetchMealOverview(foodId) {
+  const res = await fetch(`${API_BASE}/meal/${foodId}/overview`);
+  if (!res.ok) throw new Error('Failed to fetch meal overview');
+  return res.json();
+}
+
+
 export async function logExercise(payload) {
   const res = await fetch(`${API_BASE}/log/exercise`, {
     method: 'POST',
@@ -103,3 +110,34 @@ export async function activateRestDay() {
   }
   return res.json();
 }
+
+export async function defeatBoss() {
+  const res = await fetch(`${API_BASE}/boss/defeat`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to defeat boss');
+  return res.json();
+}
+
+export async function testAdvanceDay() {
+  const res = await fetch(`${API_BASE}/test/advance-day`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to advance day');
+  return res.json();
+}
+
+export async function testSimulateMissedDay() {
+  const res = await fetch(`${API_BASE}/test/simulate-missed-day`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to simulate missed day');
+  return res.json();
+}
+
+export async function fetchAgentTelemetry() {
+  const res = await fetch(`${API_BASE}/test/agent-telemetry`);
+  if (!res.ok) throw new Error('Failed to fetch agent telemetry');
+  return res.json();
+}
+

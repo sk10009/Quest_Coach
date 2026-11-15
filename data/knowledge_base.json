@@ -2026,6 +2026,24 @@
       "region": "North Indian",
       "preparation_state": "cooked",
       "is_verified": false
+    },
+    {
+      "id": "custom_a640b0e4",
+      "name": "High Protein Moong Paneer Bowl",
+      "standard_portion_g": 105.0,
+      "calories": 230.0,
+      "protein_g": 12.7,
+      "carbs_g": 11.2,
+      "fat_g": 15.6,
+      "fibre_g": 2.5,
+      "isa_hierarchy": [
+        "custom_meal",
+        "home_cooked",
+        "food"
+      ],
+      "region": "North Indian",
+      "preparation_state": "cooked",
+      "is_verified": false
     }
   ],
   "exercises": [
