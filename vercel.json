@@ -1,0 +1,17 @@
+{
+  "functions": {
+    "app/main.py": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/v1/(.*)",
+      "destination": "app/main.py"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "app/main.py"
+    }
+  ]
+}
