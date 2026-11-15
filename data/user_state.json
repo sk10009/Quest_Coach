@@ -1,0 +1,101 @@
+{
+  "profile": {
+    "age": 22,
+    "weight_kg": 70.0,
+    "height_cm": 175.0,
+    "gender": "male",
+    "gym_experience": "intermediate",
+    "preferred_region": "North Indian",
+    "goal": "maintain",
+    "bmi": 22.86,
+    "bmr": 1688.8,
+    "tdee": 2448.8,
+    "daily_targets": {
+      "calories": 2449,
+      "protein_g": 140.0,
+      "carbs_g": 319.2,
+      "fat_g": 68.0,
+      "fibre_g": 34.3
+    },
+    "refusal_explanation": null,
+    "nearest_safe_target": null,
+    "created_at": "2026-11-16T00:07:57.871083"
+  },
+  "rank": 1,
+  "level": 1,
+  "tokens": 1,
+  "xp": 100,
+  "cycle_completed_days": 0,
+  "boss_wins": 0,
+  "exercise_personal_records": {
+    "ex_bench_press": 101.3
+  },
+  "daily_logs": {
+    "2026-11-16": {
+      "date": "2026-11-16",
+      "exercise_completed": true,
+      "mindful_completed": true,
+      "nutrition_completed": true,
+      "calories_logged": 627.5,
+      "protein_logged": 40.2,
+      "carbs_logged": 16.3,
+      "fat_logged": 46.8,
+      "fibre_logged": 2.5,
+      "exercise_logs": [
+        {
+          "id": "bbe9c015",
+          "category": "weightlifting",
+          "exercise_id": "ex_bench_press",
+          "exercise_name": "Barbell Flat Bench Press",
+          "duration_min": 35.0,
+          "weight_kg": 80.0,
+          "reps": 8,
+          "sets": 3,
+          "steps_count": null,
+          "calisthenics_reps": null,
+          "epley_1rm": 101.3,
+          "timestamp": "2026-11-16T00:07:57.993532"
+        }
+      ],
+      "food_logs": [
+        {
+          "id": "6e498e33",
+          "food_id": "food_paneer_raw",
+          "name": "Fresh Paneer (Raw)",
+          "portion_g": 150.0,
+          "calories": 397.5,
+          "protein_g": 27.5,
+          "carbs_g": 5.1,
+          "fat_g": 31.2,
+          "fibre_g": 0.0,
+          "timestamp": "2026-11-16T00:07:58.038476"
+        },
+        {
+          "id": "c0137b00",
+          "food_id": "custom_2a942007",
+          "name": "High Protein Moong Paneer Bowl",
+          "portion_g": 105.0,
+          "calories": 230.0,
+          "protein_g": 12.7,
+          "carbs_g": 11.2,
+          "fat_g": 15.6,
+          "fibre_g": 2.5,
+          "timestamp": "2026-11-16T00:07:58.103050"
+        }
+      ],
+      "mindful_logs": [
+        {
+          "id": "39000289",
+          "activity_id": "mind_breath_box",
+          "name": "Box Breathing (4-4-4-4 Rhythm)",
+          "duration_min": 10,
+          "timestamp": "2026-11-16T00:07:58.169172"
+        }
+      ],
+      "tokens_spent_today": 4,
+      "is_planned_rest": true,
+      "xp_earned_today": 0
+    }
+  },
+  "simulated_date": "2026-11-16"
+}
