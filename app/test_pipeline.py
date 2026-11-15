@@ -16,6 +16,9 @@ from app.storage import KB_STORE, USER_STORE
 client = TestClient(app)
 
 def test_full_pipeline():
+    # Fresh test state
+    USER_STORE.write({})
+
     print("1. Testing GET / (root)...")
     r0 = client.get("/")
     assert r0.status_code == 200
@@ -173,7 +176,37 @@ def test_full_pipeline():
     assert r_rest.status_code == 200
     assert r_rest.json()["remaining_tokens"] == 1
 
-    print("\nAll Phase 1 & Phase 2 Integration Tests PASSED!")
+    print("14. Testing GET /api/v1/meal/{food_id}/overview (Phase 3: GA Pro Tip & Utility Rating)...")
+    r_overview = client.get("/api/v1/meal/food_whey_isolate/overview")
+    assert r_overview.status_code == 200
+    overview_data = r_overview.json()
+    assert "missing_macros_first" in overview_data
+    assert "utility_rating" in overview_data
+    assert "pro_tip" in overview_data
+    assert "Pro tip:" in overview_data["pro_tip"]
+    assert overview_data["utility_rating"] > 50
+
+    print("15. Testing Desktop Test Mode: Advance Day & AI Telemetry (Phase 4, 5, 6)...")
+    r_adv = client.post("/api/v1/test/advance-day")
+    assert r_adv.status_code == 200
+    assert "simulated_date" in r_adv.json()
+
+    print("16. Testing Desktop Test Mode: Simulate Missed Day & Readiness Predictor...")
+    r_miss = client.post("/api/v1/test/simulate-missed-day")
+    assert r_miss.status_code == 200
+    assert r_miss.json()["consecutive_unexcused_misses"] >= 1
+    assert "readiness_prediction" in r_miss.json()
+
+    print("17. Testing GET /api/v1/test/agent-telemetry...")
+    r_telem = client.get("/api/v1/test/agent-telemetry")
+    assert r_telem.status_code == 200
+    telem = r_telem.json()
+    assert "bayesian_model" in telem
+    assert "fuzzy_difficulty_controller" in telem
+    assert "forward_chaining_rule_trace" in telem
+
+    print("\nAll Phases (0 through 6) Integration Tests PASSED with Zero Errors!")
+
 
 if __name__ == "__main__":
     test_full_pipeline()

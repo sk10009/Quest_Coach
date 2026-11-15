@@ -216,9 +216,26 @@ export default function MacroFoodLoggerScreen({ catalogue, onClose, onLogged, on
                     {f.calories} kcal · P: {f.protein_g}g · C: {f.carbs_g}g · F: {f.fat_g}g ({f.standard_portion_g}g)
                   </div>
                 </div>
-                <button className="px-2.5 py-1 rounded-lg bg-emerald-600/20 text-emerald-300 text-xs font-semibold border border-emerald-500/40">
-                  Select
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onOpenOverview) onOpenOverview(f.id);
+                    }}
+                    className="px-2 py-1 rounded-lg bg-indigo-600/20 text-indigo-300 text-xs font-semibold border border-indigo-500/40 hover:bg-indigo-600/30"
+                  >
+                    Analysis
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedFood(f);
+                      setPortionGrams(f.standard_portion_g);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-600/20 text-emerald-300 text-xs font-semibold border border-emerald-500/40 hover:bg-emerald-600/30"
+                  >
+                    Log
+                  </button>
+                </div>
               </div>
             ))}
           </div>

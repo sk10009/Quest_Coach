@@ -3,7 +3,7 @@ import { fetchLevelToday, skipTask, activateRestDay } from '../api';
 import { Dumbbell, Brain, Apple, Sparkles, CheckCircle, Coins, ShieldAlert, FastForward } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-export default function LevelScreen({ onOpenLogger, onRefreshState }) {
+export default function LevelScreen({ onOpenLogger, onOpenBoss, onRefreshState }) {
   const [levelData, setLevelData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState(null);
@@ -101,6 +101,26 @@ export default function LevelScreen({ onOpenLogger, onRefreshState }) {
               All daily requirements forgiven. Zero drop-off penalty; streak protected.
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Boss Encounter Banner if Boss Day */}
+      {levelData.is_boss_day && levelData.boss_challenge && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-950/70 to-amber-950/50 border border-rose-500/60 shadow-lg shadow-rose-950/40 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-rose-300 px-2 py-0.5 rounded bg-rose-900/60 border border-rose-700/50">
+              Active Boss Encounter
+            </span>
+            <span className="text-xs font-bold text-amber-300">Reward: +5 Tokens & +1 Rank</span>
+          </div>
+          <h3 className="text-sm font-black text-white">{levelData.boss_challenge.boss_name}</h3>
+          <p className="text-xs text-slate-300">{levelData.boss_challenge.description}</p>
+          <button
+            onClick={() => onOpenBoss && onOpenBoss(levelData.boss_challenge)}
+            className="w-full mt-2 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-600/30 transition-all active:scale-95"
+          >
+            Enter Boss Arena ⚔️
+          </button>
         </div>
       )}
 

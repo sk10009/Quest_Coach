@@ -12,6 +12,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.storage import KB_STORE, USER_STORE
 from app.target_calculator import TargetCalculator
+from app.rule_engine import RULE_ENGINE
+from app.utility_and_ga import UtilityAgent, GeneticAlgorithmMealOptimizer
+from app.ai_core import AI_ESTIMATOR, BAYES_MODEL, READINESS_PREDICTOR, FUZZY_CONTROLLER
+from app.boss_engine import BOSS_ENGINE
 from app.schemas import (
     ProfileSetupRequest,
     ExerciseLogRequest,
@@ -235,15 +239,45 @@ def get_level_today():
     current_level = state.get("level", 1)
     is_boss_day = (current_level % 5 == 0)
 
+    # 1. Passively infer state
+    states = AI_ESTIMATOR.estimate(state)
+    mood = states["inferred_mood"]
+    fatigue = states["inferred_fatigue"]
+
+    # 2. Bayesian player model
+    consistency = 0.8
+    risk, weakest_pillar = BAYES_MODEL.infer_risk_and_pillar(mood, fatigue, consistency, state.get("daily_logs", {}))
+    state["weakest_pillar"] = weakest_pillar
+
+    # 3. Fuzzy difficulty controller (Unit 5)
+    fuzzy_result = FUZZY_CONTROLLER.evaluate(fatigue, mood, risk)
+    multiplier = fuzzy_result["target_multiplier"]
+    regime = fuzzy_result["regime"]
+
+    # Scale daily targets by fuzzy multiplier
+    cal_target = round(targets.get("calories", 2000) * multiplier)
+    prot_target = round(targets.get("protein_g", 120) * multiplier)
+    ex_target_min = round(25 * multiplier)
+    mindful_target_min = round(7 * multiplier)
+
+    # Day 5 Boss Challenge (Unit 3 Targeted Search)
+    boss_challenge = None
+    if is_boss_day:
+        boss_challenge = BOSS_ENGINE.generate_boss_challenge(
+            weakest_pillar=weakest_pillar,
+            rank=state.get("rank", 1),
+            targets={"calories": cal_target, "protein_g": prot_target}
+        )
+
     # 3 Quests: Nutrition, Exercise, Mindful
     quests = [
         {
             "id": "quest_macros",
             "pillar": "nutrition",
             "title": "Macro Nutrition Adherence",
-            "description": f"Hit daily calorie & protein target: {targets.get('calories', 2000)} kcal, {targets.get('protein_g', 120)}g protein",
+            "description": f"Hit daily calorie & protein target: {cal_target} kcal, {prot_target}g protein (Regime: {regime})",
             "current_value": round(daily_log.get("calories_logged", 0)),
-            "target_value": targets.get("calories", 2000),
+            "target_value": cal_target,
             "unit": "kcal",
             "completed": daily_log.get("nutrition_completed", False),
             "xp_reward": 50
@@ -252,9 +286,9 @@ def get_level_today():
             "id": "quest_exercise",
             "pillar": "exercise",
             "title": "Daily Movement / Gym Training",
-            "description": "Log at least 25 min of exercise or progressive strength workout",
+            "description": f"Log at least {ex_target_min} min of exercise or progressive strength workout",
             "current_value": sum(e.get("duration_min", 0) for e in daily_log.get("exercise_logs", [])),
-            "target_value": 25,
+            "target_value": ex_target_min,
             "unit": "min",
             "completed": daily_log.get("exercise_completed", False),
             "xp_reward": 50
@@ -263,27 +297,36 @@ def get_level_today():
             "id": "quest_mindful",
             "pillar": "mindful",
             "title": "Mindful Restoration",
-            "description": "Log at least 7 min of breathing, meditation, or mobility stretching",
+            "description": f"Log at least {mindful_target_min} min of breathing, meditation, or mobility stretching",
             "current_value": sum(m.get("duration_min", 0) for m in daily_log.get("mindful_logs", [])),
-            "target_value": 7,
+            "target_value": mindful_target_min,
             "unit": "min",
             "completed": daily_log.get("mindful_completed", False),
             "xp_reward": 50
         }
     ]
 
+    all_completed = (
+        daily_log.get("nutrition_completed", False) and
+        daily_log.get("exercise_completed", False) and
+        daily_log.get("mindful_completed", False)
+    )
+
     return {
         "level": current_level,
         "is_boss_day": is_boss_day,
+        "boss_challenge": boss_challenge,
         "date": today_str,
         "quests": quests,
+        "fuzzy_regime": regime,
+        "fuzzy_multiplier": multiplier,
+        "inferred_mood": mood,
+        "inferred_fatigue": fatigue,
+        "weakest_pillar": weakest_pillar,
+        "streak_break_risk": risk,
         "is_planned_rest": daily_log.get("is_planned_rest", False),
         "tokens": state.get("tokens", 0),
-        "all_completed": (
-            daily_log.get("nutrition_completed", False) and
-            daily_log.get("exercise_completed", False) and
-            daily_log.get("mindful_completed", False)
-        )
+        "all_completed": all_completed
     }
 
 @app.get("/api/v1/catalogue")
@@ -562,3 +605,214 @@ def take_rest_day():
         "remaining_tokens": state["tokens"],
         "message": "Rest-day pass activated! Zero penalty incurred and streak preserved."
     }
+
+@app.get("/api/v1/meal/{food_id}/overview")
+def get_meal_overview(food_id: str):
+    kb = KB_STORE.read()
+    foods = {f["id"]: f for f in kb.get("foods", [])}
+    food = foods.get(food_id)
+    if not food:
+        raise HTTPException(status_code=404, detail="Food item not found")
+
+    state = USER_STORE.read()
+    profile = state.get("profile", {})
+    daily_targets = profile.get("daily_targets", {
+        "calories": 2000, "protein_g": 120, "carbs_g": 220, "fat_g": 55, "fibre_g": 28
+    })
+
+    today_str = _get_today_str(state)
+    daily_log = _ensure_daily_log(state, today_str)
+
+    # 1. Missing Macros FIRST (SPEC 3.8 & Screen 7)
+    missing_macros = {
+        "calories": max(0.0, round(daily_targets["calories"] - daily_log.get("calories_logged", 0.0), 1)),
+        "protein_g": max(0.0, round(daily_targets["protein_g"] - daily_log.get("protein_logged", 0.0), 1)),
+        "carbs_g": max(0.0, round(daily_targets["carbs_g"] - daily_log.get("carbs_logged", 0.0), 1)),
+        "fat_g": max(0.0, round(daily_targets["fat_g"] - daily_log.get("fat_logged", 0.0), 1)),
+        "fibre_g": max(0.0, round(daily_targets["fibre_g"] - daily_log.get("fibre_logged", 0.0), 1))
+    }
+
+    # 2. Dynamic Utility-Agent Rating (0-100) (SPEC 3.8)
+    rating_data = UtilityAgent.calculate_meal_rating(
+        food=food,
+        profile=profile,
+        remaining_macros=missing_macros
+    )
+
+    # 3. Genetic Algorithm Quest & Meal Generator Pro Tip (SPEC 3.7)
+    all_foods = kb.get("foods", [])
+    ga_optimizer = GeneticAlgorithmMealOptimizer(all_foods, population_size=20, generations=12)
+    pro_tip_data = ga_optimizer.evolve_pro_tip(
+        remaining_macros=missing_macros,
+        preferred_region=profile.get("preferred_region")
+    )
+
+    return {
+        "food": food,
+        "missing_macros_first": missing_macros,
+        "utility_rating": rating_data["rating"],
+        "weights_used": rating_data["weights_used"],
+        "sub_scores": rating_data["sub_scores"],
+        "user_improvement_notes": rating_data["notes"],
+        "region_badge": food.get("region", "Pan-Indian"),
+        "pro_tip": pro_tip_data["pro_tip"],
+        "ga_recommendation": pro_tip_data.get("recommended_food"),
+        "disclaimer": "General guidance only, not medical advice"
+    }
+
+@app.post("/api/v1/boss/defeat")
+def defeat_boss():
+    """Defeating the Day 5 Boss increments Rank, awards 5 tokens, advances Level."""
+    state = USER_STORE.read()
+    current_level = state.get("level", 1)
+    if current_level % 5 != 0:
+        raise HTTPException(status_code=400, detail="Current level is not a Boss Level.")
+
+    state["rank"] = state.get("rank", 1) + 1
+    state["boss_wins"] = state.get("boss_wins", 0) + 1
+    state["tokens"] = state.get("tokens", 0) + 5
+    state["xp"] = state.get("xp", 0) + 150
+    state["level"] = current_level + 1
+    state["cycle_completed_days"] = 0 # reset cycle counter
+
+    USER_STORE.write(state)
+    return {
+        "status": "victory",
+        "new_rank": state["rank"],
+        "new_level": state["level"],
+        "tokens": state["tokens"],
+        "message": "Boss Defeated! Athlete Rank increased and +5 tokens awarded!"
+    }
+
+@app.post("/api/v1/test/advance-day")
+def test_advance_day():
+    """Desktop Test Mode: Advances simulated calendar day by 1."""
+    state = USER_STORE.read()
+    curr_date_str = _get_today_str(state)
+    try:
+        from datetime import timedelta
+        curr_d = date.fromisoformat(curr_date_str)
+        next_d = curr_d + timedelta(days=1)
+        next_date_str = next_d.isoformat()
+    except Exception:
+        next_date_str = date.today().isoformat()
+
+    state["simulated_date"] = next_date_str
+    
+    # Check if yesterday was completed
+    yesterday_log = state.get("daily_logs", {}).get(curr_date_str, {})
+    all_met = (
+        yesterday_log.get("exercise_completed") and
+        yesterday_log.get("mindful_completed") and
+        yesterday_log.get("nutrition_completed")
+    )
+
+    if all_met or yesterday_log.get("is_planned_rest"):
+        state["consecutive_unexcused_misses"] = 0
+        state["tokens"] = state.get("tokens", 0) + 1
+        cycle_cnt = state.get("cycle_completed_days", 0) + 1
+        state["cycle_completed_days"] = cycle_cnt
+        if cycle_cnt >= 4:
+            # Advance to boss level if on day 4
+            if state.get("level", 1) % 5 != 0:
+                state["level"] = ((state.get("level", 1) // 5) * 5) + 5
+        else:
+            state["level"] = state.get("level", 1) + 1
+    else:
+        # Unexcused miss
+        state["consecutive_unexcused_misses"] = state.get("consecutive_unexcused_misses", 0) + 1
+
+    _ensure_daily_log(state, next_date_str)
+    USER_STORE.write(state)
+
+    return {
+        "status": "success",
+        "simulated_date": next_date_str,
+        "current_level": state.get("level", 1),
+        "cycle_completed_days": state.get("cycle_completed_days", 0),
+        "tokens": state.get("tokens", 0),
+        "consecutive_unexcused_misses": state.get("consecutive_unexcused_misses", 0)
+    }
+
+@app.post("/api/v1/test/simulate-missed-day")
+def test_simulate_missed_day():
+    """Desktop Test Mode: Simulates unexcused missed day triggering Readiness Predictor & Non-Monotonic Override."""
+    state = USER_STORE.read()
+    curr_date_str = _get_today_str(state)
+    from datetime import timedelta
+    try:
+        curr_d = date.fromisoformat(curr_date_str)
+        next_d = curr_d + timedelta(days=1)
+        next_date_str = next_d.isoformat()
+    except Exception:
+        next_date_str = date.today().isoformat()
+
+    state["simulated_date"] = next_date_str
+    state["consecutive_unexcused_misses"] = state.get("consecutive_unexcused_misses", 0) + 1
+
+    # Evaluate readiness predictor
+    states = AI_ESTIMATOR.estimate(state)
+    readiness = READINESS_PREDICTOR.predict_readiness(
+        consecutive_unexcused_misses=state["consecutive_unexcused_misses"],
+        inferred_fatigue=states["inferred_fatigue"],
+        recent_adherence_rate=0.4
+    )
+
+    override_applied = False
+    if readiness["non_monotonic_override"]:
+        override_applied = True
+        # Level down or reset cycle safely per SPEC 3.5
+        state["level"] = max(1, state.get("level", 1) - 1)
+        state["cycle_completed_days"] = max(0, state.get("cycle_completed_days", 0) - 1)
+
+    _ensure_daily_log(state, next_date_str)
+    USER_STORE.write(state)
+
+    return {
+        "status": "success",
+        "simulated_date": next_date_str,
+        "consecutive_unexcused_misses": state["consecutive_unexcused_misses"],
+        "readiness_prediction": readiness,
+        "non_monotonic_override_applied": override_applied,
+        "current_level": state["level"]
+    }
+
+@app.get("/api/v1/test/agent-telemetry")
+def test_agent_telemetry():
+    """Desktop Test Mode: Returns raw Bayesian probabilities, Fuzzy outputs, Rule traces, and full JSON state."""
+    state = USER_STORE.read()
+    profile = state.get("profile", {})
+    daily_logs = state.get("daily_logs", {})
+
+    states = AI_ESTIMATOR.estimate(state)
+    risk, weakest_pillar = BAYES_MODEL.infer_risk_and_pillar(
+        states["inferred_mood"], states["inferred_fatigue"], 0.75, daily_logs
+    )
+    fuzzy = FUZZY_CONTROLLER.evaluate(states["inferred_fatigue"], states["inferred_mood"], risk)
+    readiness = READINESS_PREDICTOR.predict_readiness(
+        consecutive_unexcused_misses=state.get("consecutive_unexcused_misses", 0),
+        inferred_fatigue=states["inferred_fatigue"],
+        recent_adherence_rate=0.75
+    )
+    forward_facts, rule_trace = RULE_ENGINE.forward_chain({
+        "gender": profile.get("gender"),
+        "target_calories": profile.get("daily_targets", {}).get("calories", 2000),
+        "level": state.get("level", 1),
+        "fibre_g": profile.get("daily_targets", {}).get("fibre_g", 28),
+        "gym_experience": profile.get("gym_experience", "intermediate"),
+        "completed_pillars_count": 3
+    })
+
+    return {
+        "passive_states": states,
+        "bayesian_model": {
+            "streak_break_risk": risk,
+            "weakest_pillar": weakest_pillar
+        },
+        "fuzzy_difficulty_controller": fuzzy,
+        "readiness_predictor": readiness,
+        "forward_chaining_rule_trace": rule_trace,
+        "live_user_state": state
+    }
+
+
