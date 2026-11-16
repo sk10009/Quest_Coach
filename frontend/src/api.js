@@ -111,6 +111,41 @@ export async function activateRestDay() {
   return res.json();
 }
 
+export async function resetProfile() {
+  const res = await fetch(`${API_BASE}/profile/reset`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to reset profile');
+  }
+  return res.json();
+}
+
+export async function deleteFoodLog(entryId) {
+  const res = await fetch(`${API_BASE}/log/food/${entryId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete food log');
+  return res.json();
+}
+
+export async function deleteExerciseLog(entryId) {
+  const res = await fetch(`${API_BASE}/log/exercise/${entryId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete exercise log');
+  return res.json();
+}
+
+export async function deleteMindfulLog(entryId) {
+  const res = await fetch(`${API_BASE}/log/mindful/${entryId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete mindful log');
+  return res.json();
+}
+
 export async function defeatBoss() {
   const res = await fetch(`${API_BASE}/boss/defeat`, {
     method: 'POST',

@@ -19,14 +19,17 @@
     },
     "refusal_explanation": null,
     "nearest_safe_target": null,
-    "created_at": "2026-11-16T01:31:26.133007"
+    "created_at": "2026-11-16T05:44:18.006330"
   },
   "rank": 1,
-  "level": 2,
-  "tokens": 2,
+  "level": 1,
+  "current_day": 1,
+  "tokens": 3,
   "xp": 100,
-  "cycle_completed_days": 1,
+  "cycle_completed_days": 0,
   "boss_wins": 0,
+  "consecutive_unexcused_misses": 0,
+  "re_entry_mode": false,
   "exercise_personal_records": {
     "ex_bench_press": 101.3
   },
@@ -35,15 +38,15 @@
       "date": "2026-11-16",
       "exercise_completed": true,
       "mindful_completed": true,
-      "nutrition_completed": true,
-      "calories_logged": 627.5,
-      "protein_logged": 40.2,
-      "carbs_logged": 16.3,
-      "fat_logged": 46.8,
-      "fibre_logged": 2.5,
+      "nutrition_completed": false,
+      "calories_logged": 0,
+      "protein_logged": 0,
+      "carbs_logged": 0,
+      "fat_logged": 0,
+      "fibre_logged": 0,
       "exercise_logs": [
         {
-          "id": "7e12056d",
+          "id": "3222f4e5",
           "category": "weightlifting",
           "exercise_id": "ex_bench_press",
           "exercise_name": "Barbell Flat Bench Press",
@@ -54,83 +57,23 @@
           "steps_count": null,
           "calisthenics_reps": null,
           "epley_1rm": 101.3,
-          "timestamp": "2026-11-16T01:31:26.229368"
+          "timestamp": "2026-11-16T05:44:18.056243"
         }
       ],
-      "food_logs": [
-        {
-          "id": "33178e8c",
-          "food_id": "food_paneer_raw",
-          "name": "Fresh Paneer (Raw)",
-          "portion_g": 150.0,
-          "calories": 397.5,
-          "protein_g": 27.5,
-          "carbs_g": 5.1,
-          "fat_g": 31.2,
-          "fibre_g": 0.0,
-          "timestamp": "2026-11-16T01:31:26.279421"
-        },
-        {
-          "id": "4a9dec71",
-          "food_id": "custom_a640b0e4",
-          "name": "High Protein Moong Paneer Bowl",
-          "portion_g": 105.0,
-          "calories": 230.0,
-          "protein_g": 12.7,
-          "carbs_g": 11.2,
-          "fat_g": 15.6,
-          "fibre_g": 2.5,
-          "timestamp": "2026-11-16T01:31:26.327103"
-        }
-      ],
+      "food_logs": [],
       "mindful_logs": [
         {
-          "id": "2da37fb9",
+          "id": "ba779299",
           "activity_id": "mind_breath_box",
           "name": "Box Breathing (4-4-4-4 Rhythm)",
           "duration_min": 10,
-          "timestamp": "2026-11-16T01:31:26.373126"
+          "timestamp": "2026-11-16T05:44:18.158665"
         }
       ],
-      "tokens_spent_today": 4,
-      "is_planned_rest": true,
-      "xp_earned_today": 0
-    },
-    "2026-11-17": {
-      "date": "2026-11-17",
-      "exercise_completed": false,
-      "mindful_completed": false,
-      "nutrition_completed": false,
-      "calories_logged": 0.0,
-      "protein_logged": 0.0,
-      "carbs_logged": 0.0,
-      "fat_logged": 0.0,
-      "fibre_logged": 0.0,
-      "exercise_logs": [],
-      "food_logs": [],
-      "mindful_logs": [],
-      "tokens_spent_today": 0,
-      "is_planned_rest": false,
-      "xp_earned_today": 0
-    },
-    "2026-11-18": {
-      "date": "2026-11-18",
-      "exercise_completed": false,
-      "mindful_completed": false,
-      "nutrition_completed": false,
-      "calories_logged": 0.0,
-      "protein_logged": 0.0,
-      "carbs_logged": 0.0,
-      "fat_logged": 0.0,
-      "fibre_logged": 0.0,
-      "exercise_logs": [],
-      "food_logs": [],
-      "mindful_logs": [],
-      "tokens_spent_today": 0,
+      "tokens_spent_today": 2,
       "is_planned_rest": false,
       "xp_earned_today": 0
     }
   },
-  "simulated_date": "2026-11-18",
-  "consecutive_unexcused_misses": 1
+  "simulated_date": "2026-11-16"
 }

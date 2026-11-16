@@ -2044,6 +2044,212 @@
       "region": "North Indian",
       "preparation_state": "cooked",
       "is_verified": false
+    },
+    {
+      "id": "custom_5fca2b60",
+      "name": "High Protein Moong Paneer Bowl",
+      "standard_portion_g": 105.0,
+      "calories": 230.0,
+      "protein_g": 12.7,
+      "carbs_g": 11.2,
+      "fat_g": 15.6,
+      "fibre_g": 2.5,
+      "isa_hierarchy": [
+        "custom_meal",
+        "home_cooked",
+        "food"
+      ],
+      "region": "North Indian",
+      "preparation_state": "cooked",
+      "is_verified": false
+    },
+    {
+      "id": "custom_e159c86a",
+      "name": "High Protein Moong Paneer Bowl",
+      "standard_portion_g": 105.0,
+      "calories": 230.0,
+      "protein_g": 12.7,
+      "carbs_g": 11.2,
+      "fat_g": 15.6,
+      "fibre_g": 2.5,
+      "isa_hierarchy": [
+        "custom_meal",
+        "home_cooked",
+        "food"
+      ],
+      "region": "North Indian",
+      "preparation_state": "cooked",
+      "is_verified": false
+    }
+  ],
+  "pairings": [
+    {
+      "food_id": "food_whey_isolate",
+      "pairs_well_with": [
+        "food_toned_milk",
+        "food_banana"
+      ],
+      "reason": "Fast protein + carbs: ideal post-workout shake"
+    },
+    {
+      "food_id": "food_chicken_breast_raw",
+      "pairs_well_with": [
+        "food_steamed_rice",
+        "food_roti_wheat"
+      ],
+      "reason": "Complete protein + complex carbs for muscle repair"
+    },
+    {
+      "food_id": "food_chicken_breast_boiled",
+      "pairs_well_with": [
+        "food_steamed_rice",
+        "food_roti_wheat"
+      ],
+      "reason": "High-protein lean meal with energy carbs"
+    },
+    {
+      "food_id": "food_dal_tadka",
+      "pairs_well_with": [
+        "food_steamed_rice",
+        "food_roti_wheat"
+      ],
+      "reason": "Dal Chawal / Dal Roti — complete amino acid profile"
+    },
+    {
+      "food_id": "food_dal_makhani",
+      "pairs_well_with": [
+        "food_steamed_rice",
+        "food_roti_wheat"
+      ],
+      "reason": "Creamy dal with rice or roti for a balanced meal"
+    },
+    {
+      "food_id": "food_rajma_curry",
+      "pairs_well_with": [
+        "food_steamed_rice",
+        "food_jeera_rice"
+      ],
+      "reason": "Rajma Chawal — classic high-fibre protein combo"
+    },
+    {
+      "food_id": "food_chole_masala",
+      "pairs_well_with": [
+        "food_roti_wheat",
+        "food_steamed_rice"
+      ],
+      "reason": "Chickpeas + roti/rice: fibre-rich balanced meal"
+    },
+    {
+      "food_id": "food_palak_paneer",
+      "pairs_well_with": [
+        "food_roti_wheat",
+        "food_roti_ghee"
+      ],
+      "reason": "Paneer protein + roti carbs + iron from spinach"
+    },
+    {
+      "food_id": "food_idli_steamed",
+      "pairs_well_with": [
+        "food_sambar",
+        "food_coconut_chutney"
+      ],
+      "reason": "Classic South Indian — fermented protein + lentil broth"
+    },
+    {
+      "food_id": "food_plain_dosa",
+      "pairs_well_with": [
+        "food_sambar",
+        "food_coconut_chutney"
+      ],
+      "reason": "Dosa + sambar: low-fat, high-fibre breakfast combo"
+    },
+    {
+      "food_id": "food_oats_rolled",
+      "pairs_well_with": [
+        "food_toned_milk",
+        "food_banana"
+      ],
+      "reason": "Slow carbs + dairy protein + potassium: pre-workout"
+    },
+    {
+      "food_id": "food_paneer_raw",
+      "pairs_well_with": [
+        "food_roti_wheat",
+        "food_broccoli_steamed"
+      ],
+      "reason": "High-protein dairy with complex carbs and veg"
+    },
+    {
+      "food_id": "food_egg_white",
+      "pairs_well_with": [
+        "food_oats_cooked",
+        "food_banana"
+      ],
+      "reason": "Lean protein + slow carbs: breakfast of champions"
+    },
+    {
+      "food_id": "food_brown_rice_cooked",
+      "pairs_well_with": [
+        "food_dal_tadka",
+        "food_chicken_curry_homestyle"
+      ],
+      "reason": "Complex carbs + protein: ideal pre-training meal"
+    },
+    {
+      "food_id": "food_poha_vegetable",
+      "pairs_well_with": [
+        "food_curd_dahi",
+        "food_banana"
+      ],
+      "reason": "Light carbs + probiotic curd: easy digestive breakfast"
+    },
+    {
+      "food_id": "food_suji_upma",
+      "pairs_well_with": [
+        "food_curd_dahi",
+        "food_coconut_chutney"
+      ],
+      "reason": "Semolina + curd: quick energy with probiotics"
+    },
+    {
+      "food_id": "food_sambar",
+      "pairs_well_with": [
+        "food_idli_steamed",
+        "food_steamed_rice"
+      ],
+      "reason": "Lentil broth pairs with any South Indian staple"
+    },
+    {
+      "food_id": "food_bhindi_masala",
+      "pairs_well_with": [
+        "food_roti_wheat",
+        "food_curd_dahi"
+      ],
+      "reason": "Bhindi sabzi + roti + dahi: balanced North Indian thali"
+    },
+    {
+      "food_id": "food_aloo_gobi",
+      "pairs_well_with": [
+        "food_roti_wheat",
+        "food_curd_dahi"
+      ],
+      "reason": "Aloo Gobi + roti: comforting, fibre-rich meal"
+    },
+    {
+      "food_id": "food_baingan_bharta",
+      "pairs_well_with": [
+        "food_roti_wheat",
+        "food_curd_dahi"
+      ],
+      "reason": "Smoky baingan bharta + roti: classic low-cal combo"
+    },
+    {
+      "food_id": "food_rasam_pepper",
+      "pairs_well_with": [
+        "food_steamed_rice",
+        "food_idli_steamed"
+      ],
+      "reason": "Pepper rasam + rice: digestive aid + warming spices"
     }
   ],
   "exercises": [

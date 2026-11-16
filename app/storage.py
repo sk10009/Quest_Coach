@@ -21,11 +21,16 @@ class AtomicJsonStore:
     - Serverless (VERCEL=1): reads/writes to REMOTE_JSON_STORE_URL or Vercel Blob adapter via HTTPS JSON endpoint.
     """
     def __init__(self, file_path: str):
-        self.file_path = os.path.abspath(file_path)
+        self._filename = os.path.basename(file_path)
         self.is_vercel = os.environ.get("VERCEL") == "1"
         self.remote_url = os.environ.get("REMOTE_JSON_STORE_URL")
         self.blob_token = os.environ.get("BLOB_READ_WRITE_TOKEN")
-        self._filename = os.path.basename(self.file_path)
+        # On Vercel, the project root is read-only; fall back to /tmp for writable state
+        if self.is_vercel:
+            tmp_dir = os.environ.get("VERCEL_TMP_DIR", "/tmp/quest_coach_data")
+            self.file_path = os.path.join(tmp_dir, self._filename)
+        else:
+            self.file_path = os.path.abspath(file_path)
 
     def read(self, default: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         if default is None:

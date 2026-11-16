@@ -180,10 +180,13 @@ def setup_profile(req: ProfileSetupRequest):
     state["profile"] = profile_data
     state.setdefault("rank", 1)
     state.setdefault("level", 1)
+    state.setdefault("current_day", 1)
     state.setdefault("tokens", 5) # starting bonus
     state.setdefault("xp", 0)
     state.setdefault("cycle_completed_days", 0)
     state.setdefault("boss_wins", 0)
+    state.setdefault("consecutive_unexcused_misses", 0)
+    state.setdefault("re_entry_mode", False)
     state.setdefault("exercise_personal_records", {})
     state.setdefault("daily_logs", {})
     state.setdefault("simulated_date", date.today().isoformat())
@@ -200,7 +203,9 @@ def setup_profile(req: ProfileSetupRequest):
 def get_pathway():
     state = USER_STORE.read()
     current_level = state.get("level", 1)
+    current_day = state.get("current_day", 1)
     cycle_days = state.get("cycle_completed_days", 0)
+    boss_wins = state.get("boss_wins", 0)
 
     # 15 nodes pathway representation (3 full cycles)
     nodes = []
@@ -219,11 +224,15 @@ def get_pathway():
 
     return {
         "current_level": current_level,
-        "cycle_progress": f"{cycle_days} / 4 days to Boss",
+        "current_day": current_day,
+        "cycle_progress": f"Day {current_day} of 5",
         "tokens": state.get("tokens", 0),
         "rank": state.get("rank", 1),
+        "boss_wins": boss_wins,
+        "re_entry_mode": state.get("re_entry_mode", False),
         "nodes": nodes
     }
+
 
 @app.get("/api/v1/level/today")
 def get_level_today():
@@ -237,7 +246,8 @@ def get_level_today():
     targets = profile.get("daily_targets", {})
     
     current_level = state.get("level", 1)
-    is_boss_day = (current_level % 5 == 0)
+    current_day = state.get("current_day", 1)
+    is_boss_day = (current_day == 5)
 
     # 1. Passively infer state
     states = AI_ESTIMATOR.estimate(state)
@@ -314,6 +324,7 @@ def get_level_today():
 
     return {
         "level": current_level,
+        "current_day": current_day,
         "is_boss_day": is_boss_day,
         "boss_challenge": boss_challenge,
         "date": today_str,
@@ -326,16 +337,59 @@ def get_level_today():
         "streak_break_risk": risk,
         "is_planned_rest": daily_log.get("is_planned_rest", False),
         "tokens": state.get("tokens", 0),
-        "all_completed": all_completed
+        "re_entry_mode": state.get("re_entry_mode", False),
+        "all_completed": all_completed,
+        "food_logs": daily_log.get("food_logs", []),
+        "exercise_logs": daily_log.get("exercise_logs", []),
+        "mindful_logs": daily_log.get("mindful_logs", []),
+        "calories_logged": daily_log.get("calories_logged", 0.0),
+        "protein_logged": daily_log.get("protein_logged", 0.0),
+        "carbs_logged": daily_log.get("carbs_logged", 0.0),
+        "fat_logged": daily_log.get("fat_logged", 0.0),
+        "fibre_logged": daily_log.get("fibre_logged", 0.0)
     }
 
 @app.get("/api/v1/catalogue")
 def get_catalogue():
     kb = KB_STORE.read()
+
+    # Smart meal pairings (co-occurrence / complementary nutrition)
+    pairings = kb.get("pairings", [
+        {"food_id": "food_whey_isolate",        "pairs_well_with": ["food_toned_milk", "food_banana"],         "reason": "Fast protein + carbs: ideal post-workout shake"},
+        {"food_id": "food_chicken_breast_raw",   "pairs_well_with": ["food_steamed_rice", "food_roti_wheat"],   "reason": "Complete protein + complex carbs for muscle repair"},
+        {"food_id": "food_chicken_breast_boiled","pairs_well_with": ["food_steamed_rice", "food_roti_wheat"],   "reason": "High-protein lean meal with energy carbs"},
+        {"food_id": "food_dal_tadka",            "pairs_well_with": ["food_steamed_rice", "food_roti_wheat"],   "reason": "Dal Chawal / Dal Roti — complete amino acid profile"},
+        {"food_id": "food_dal_makhani",          "pairs_well_with": ["food_steamed_rice", "food_roti_wheat"],   "reason": "Creamy dal with rice or roti for a balanced meal"},
+        {"food_id": "food_rajma_curry",          "pairs_well_with": ["food_steamed_rice", "food_jeera_rice"],   "reason": "Rajma Chawal — classic high-fibre protein combo"},
+        {"food_id": "food_chole_masala",         "pairs_well_with": ["food_roti_wheat", "food_steamed_rice"],   "reason": "Chickpeas + roti/rice: fibre-rich balanced meal"},
+        {"food_id": "food_palak_paneer",         "pairs_well_with": ["food_roti_wheat", "food_roti_ghee"],      "reason": "Paneer protein + roti carbs + iron from spinach"},
+        {"food_id": "food_idli_steamed",         "pairs_well_with": ["food_sambar", "food_coconut_chutney"],    "reason": "Classic South Indian — fermented protein + lentil broth"},
+        {"food_id": "food_plain_dosa",           "pairs_well_with": ["food_sambar", "food_coconut_chutney"],    "reason": "Dosa + sambar: low-fat, high-fibre breakfast combo"},
+        {"food_id": "food_oats_rolled",          "pairs_well_with": ["food_toned_milk", "food_banana"],         "reason": "Slow carbs + dairy protein + potassium: pre-workout"},
+        {"food_id": "food_paneer_raw",           "pairs_well_with": ["food_roti_wheat", "food_broccoli_steamed"], "reason": "High-protein dairy with complex carbs and veg"},
+        {"food_id": "food_egg_white",            "pairs_well_with": ["food_oats_cooked", "food_banana"],        "reason": "Lean protein + slow carbs: breakfast of champions"},
+        {"food_id": "food_brown_rice_cooked",    "pairs_well_with": ["food_dal_tadka", "food_chicken_curry_homestyle"], "reason": "Complex carbs + protein: ideal pre-training meal"},
+        {"food_id": "food_poha_vegetable",       "pairs_well_with": ["food_curd_dahi", "food_banana"],          "reason": "Light carbs + probiotic curd: easy digestive breakfast"},
+        {"food_id": "food_suji_upma",            "pairs_well_with": ["food_curd_dahi", "food_coconut_chutney"], "reason": "Semolina + curd: quick energy with probiotics"},
+        {"food_id": "food_sambar",               "pairs_well_with": ["food_idli_steamed", "food_steamed_rice"], "reason": "Lentil broth pairs with any South Indian staple"},
+    ])
+
+    # Exercise presets / variety groupings
+    exercises = kb.get("exercises", [])
+    exercise_presets = {
+        "push": [e["id"] for e in exercises if any(h in e.get("isa_hierarchy", []) for h in ["chest_workout", "shoulder_workout", "tricep_workout"])],
+        "pull": [e["id"] for e in exercises if any(h in e.get("isa_hierarchy", []) for h in ["back_workout", "bicep_workout"])],
+        "legs": [e["id"] for e in exercises if any(h in e.get("isa_hierarchy", []) for h in ["leg_workout", "glute_workout"])],
+        "cardio": [e["id"] for e in exercises if e.get("category") == "cardio"],
+        "calisthenics": [e["id"] for e in exercises if e.get("category") == "calisthenics"],
+    }
+
     return {
         "foods": kb.get("foods", []),
-        "exercises": kb.get("exercises", []),
-        "mindful": kb.get("mindful", [])
+        "exercises": exercises,
+        "mindful": kb.get("mindful", []),
+        "pairings": pairings,
+        "exercise_presets": exercise_presets
     }
 
 @app.post("/api/v1/log/exercise")
@@ -370,12 +424,36 @@ def log_exercise(req: ExerciseLogRequest):
 
     daily_log["exercise_logs"].append(exercise_entry)
     total_dur = sum(e.get("duration_min", 0) for e in daily_log["exercise_logs"])
-    
+
     xp_delta = 0
     if not daily_log.get("exercise_completed") and total_dur >= 25:
         daily_log["exercise_completed"] = True
         xp_delta = 50
         state["xp"] = state.get("xp", 0) + xp_delta
+
+    # Variety check: if the same exercise logged 3+ times today, suggest alternatives
+    variety_tip = None
+    same_count = sum(1 for e in daily_log["exercise_logs"] if e.get("exercise_id") == req.exercise_id)
+    if same_count >= 3:
+        kb = KB_STORE.read()
+        exercises = kb.get("exercises", [])
+        ex_map = {e["id"]: e for e in exercises}
+        this_ex = ex_map.get(req.exercise_id, {})
+        this_hierarchy = set(this_ex.get("isa_hierarchy", []))
+        # Find exercises sharing a muscle-group tag but are different
+        muscle_tags = {"chest_workout", "back_workout", "leg_workout", "shoulder_workout",
+                       "bicep_workout", "tricep_workout", "glute_workout", "core_workout",
+                       "cardio", "calisthenics"}
+        shared_tags = this_hierarchy & muscle_tags
+        alternatives = [
+            e["name"] for e in exercises
+            if e["id"] != req.exercise_id and set(e.get("isa_hierarchy", [])) & shared_tags
+        ][:3]
+        if alternatives:
+            variety_tip = (
+                f"Great effort! You've done {req.exercise_name} {same_count}x today. "
+                f"Consider mixing in: {', '.join(alternatives)} for more variety."
+            )
 
     USER_STORE.write(state)
     return {
@@ -383,7 +461,8 @@ def log_exercise(req: ExerciseLogRequest):
         "xp_delta": xp_delta,
         "total_xp": state.get("xp", 0),
         "epley_1rm": epley_1rm,
-        "exercise_completed": daily_log.get("exercise_completed", False)
+        "exercise_completed": daily_log.get("exercise_completed", False),
+        "variety_tip": variety_tip
     }
 
 @app.post("/api/v1/log/food")
@@ -553,15 +632,199 @@ def log_mindful(req: MindfulLogRequest):
         "mindful_completed": daily_log.get("mindful_completed", False)
     }
 
+# ---- DELETE log endpoints ----
+
+def _recalc_daily_totals(daily_log: dict) -> None:
+    """Recalculate food macros and quest completion flags from scratch after a delete."""
+    food_logs = daily_log.get("food_logs", [])
+    daily_log["calories_logged"] = round(sum(e.get("calories", 0) for e in food_logs), 1)
+    daily_log["protein_logged"] = round(sum(e.get("protein_g", 0) for e in food_logs), 1)
+    daily_log["carbs_logged"] = round(sum(e.get("carbs_g", 0) for e in food_logs), 1)
+    daily_log["fat_logged"] = round(sum(e.get("fat_g", 0) for e in food_logs), 1)
+    daily_log["fibre_logged"] = round(sum(e.get("fibre_g", 0) for e in food_logs), 1)
+
+def _recalc_quest_completion(state: dict, daily_log: dict) -> None:
+    """Re-evaluate quest completion flags + XP after a log entry is deleted."""
+    profile = state.get("profile", {})
+    targets = profile.get("daily_targets", {})
+
+    # Nutrition
+    target_cals = targets.get("calories", 2000)
+    daily_log["nutrition_completed"] = (
+        daily_log.get("calories_logged", 0) >= target_cals * 0.85
+    )
+
+    # Exercise
+    total_ex = sum(e.get("duration_min", 0) for e in daily_log.get("exercise_logs", []))
+    daily_log["exercise_completed"] = total_ex >= 25
+
+    # Mindful
+    total_mind = sum(m.get("duration_min", 0) for m in daily_log.get("mindful_logs", []))
+    daily_log["mindful_completed"] = total_mind >= 7
+
+@app.delete("/api/v1/log/food/{entry_id}")
+def delete_food_log(entry_id: str):
+    state = USER_STORE.read()
+    today_str = _get_today_str(state)
+    daily_log = _ensure_daily_log(state, today_str)
+    food_logs = daily_log.get("food_logs", [])
+
+    # Try match by UUID id; fallback to list index if entry_id is numeric
+    new_logs = [e for e in food_logs if e.get("id") != entry_id]
+    if len(new_logs) == len(food_logs):
+        # Try index fallback
+        try:
+            idx = int(entry_id)
+            if 0 <= idx < len(food_logs):
+                new_logs = food_logs[:idx] + food_logs[idx + 1:]
+            else:
+                raise HTTPException(status_code=404, detail="Food log entry not found")
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=404, detail="Food log entry not found")
+
+    daily_log["food_logs"] = new_logs
+    _recalc_daily_totals(daily_log)
+    _recalc_quest_completion(state, daily_log)
+    USER_STORE.write(state)
+    return {
+        "status": "deleted",
+        "daily_macros": {
+            "calories": daily_log["calories_logged"],
+            "protein_g": daily_log["protein_logged"],
+            "carbs_g": daily_log["carbs_logged"],
+            "fat_g": daily_log["fat_logged"],
+            "fibre_g": daily_log["fibre_logged"]
+        },
+        "nutrition_completed": daily_log["nutrition_completed"]
+    }
+
+@app.delete("/api/v1/log/exercise/{entry_id}")
+def delete_exercise_log(entry_id: str):
+    state = USER_STORE.read()
+    today_str = _get_today_str(state)
+    daily_log = _ensure_daily_log(state, today_str)
+    ex_logs = daily_log.get("exercise_logs", [])
+
+    new_logs = [e for e in ex_logs if e.get("id") != entry_id]
+    if len(new_logs) == len(ex_logs):
+        try:
+            idx = int(entry_id)
+            if 0 <= idx < len(ex_logs):
+                new_logs = ex_logs[:idx] + ex_logs[idx + 1:]
+            else:
+                raise HTTPException(status_code=404, detail="Exercise log entry not found")
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=404, detail="Exercise log entry not found")
+
+    daily_log["exercise_logs"] = new_logs
+    _recalc_quest_completion(state, daily_log)
+    USER_STORE.write(state)
+    total_dur = sum(e.get("duration_min", 0) for e in new_logs)
+    return {
+        "status": "deleted",
+        "total_exercise_min": total_dur,
+        "exercise_completed": daily_log["exercise_completed"]
+    }
+
+@app.delete("/api/v1/log/mindful/{entry_id}")
+def delete_mindful_log(entry_id: str):
+    state = USER_STORE.read()
+    today_str = _get_today_str(state)
+    daily_log = _ensure_daily_log(state, today_str)
+    mind_logs = daily_log.get("mindful_logs", [])
+
+    new_logs = [m for m in mind_logs if m.get("id") != entry_id]
+    if len(new_logs) == len(mind_logs):
+        try:
+            idx = int(entry_id)
+            if 0 <= idx < len(mind_logs):
+                new_logs = mind_logs[:idx] + mind_logs[idx + 1:]
+            else:
+                raise HTTPException(status_code=404, detail="Mindful log entry not found")
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=404, detail="Mindful log entry not found")
+
+    daily_log["mindful_logs"] = new_logs
+    _recalc_quest_completion(state, daily_log)
+    USER_STORE.write(state)
+    total_dur = sum(m.get("duration_min", 0) for m in new_logs)
+    return {
+        "status": "deleted",
+        "total_mindful_min": total_dur,
+        "mindful_completed": daily_log["mindful_completed"]
+    }
+
+# ---- Profile Reset ----
+
+@app.post("/api/v1/profile/reset")
+def reset_profile():
+    """
+    Reset logs, streaks, and current cycle back to Day 1 Level 1 while
+    keeping the user's profile data, rank, boss_wins, and XP intact.
+    """
+    state = USER_STORE.read()
+    if not state.get("profile"):
+        raise HTTPException(status_code=404, detail="No profile found — set up a profile first.")
+
+    # Preserve identity fields
+    preserved = {
+        "profile": state["profile"],
+        "rank": state.get("rank", 1),
+        "boss_wins": state.get("boss_wins", 0),
+        "xp": state.get("xp", 0),
+        "exercise_personal_records": state.get("exercise_personal_records", {}),
+    }
+
+    # Reset everything else
+    today_str = date.today().isoformat()
+    new_state = {
+        **preserved,
+        "level": 1,
+        "current_day": 1,
+        "tokens": 5,
+        "cycle_completed_days": 0,
+        "consecutive_unexcused_misses": 0,
+        "re_entry_mode": False,
+        "simulated_date": today_str,
+        "daily_logs": {},
+        "weakest_pillar": "exercise",
+    }
+    _ensure_daily_log(new_state, today_str)
+    USER_STORE.write(new_state)
+
+    return {
+        "status": "reset",
+        "message": "Profile reset to Day 1 Level 1. Your rank, boss wins, XP, and PRs are preserved.",
+        "level": new_state["level"],
+        "tokens": new_state["tokens"],
+        "rank": new_state["rank"],
+        "boss_wins": new_state["boss_wins"]
+    }
+
 @app.post("/api/v1/tokens/skip-task")
 def skip_task(req: TokenSkipRequest):
     state = USER_STORE.read()
     today_str = _get_today_str(state)
     daily_log = _ensure_daily_log(state, today_str)
 
-    if state.get("tokens", 0) < 1:
-        raise HTTPException(status_code=400, detail="Insufficient tokens. You need 1 token to skip a task.")
-    
+    current_level = state.get("level", 1)
+    current_day = state.get("current_day", 1)
+    if current_day == 5:
+        raise HTTPException(
+            status_code=400,
+            detail="Boss Level cannot be skipped — face the challenge and earn your rank!"
+        )
+
+    # Base cost: 2 tokens; discounted to 1 once at least 1 Boss is defeated
+    boss_wins = state.get("boss_wins", 0)
+    skip_cost = 1 if boss_wins >= 1 else 2
+
+    if state.get("tokens", 0) < skip_cost:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient tokens. Skipping a task costs {skip_cost} token(s)."
+        )
+
     if daily_log.get("tokens_spent_today", 0) >= 3:
         raise HTTPException(status_code=400, detail="Daily token spending limit reached (max 3 token actions per day).")
 
@@ -573,14 +836,16 @@ def skip_task(req: TokenSkipRequest):
     elif pillar == "nutrition":
         daily_log["nutrition_completed"] = True
 
-    state["tokens"] = state.get("tokens", 0) - 1
-    daily_log["tokens_spent_today"] = daily_log.get("tokens_spent_today", 0) + 1
+    state["tokens"] = state.get("tokens", 0) - skip_cost
+    daily_log["tokens_spent_today"] = daily_log.get("tokens_spent_today", 0) + skip_cost
     USER_STORE.write(state)
 
     return {
         "status": "success",
         "remaining_tokens": state["tokens"],
-        "task_skipped": pillar
+        "task_skipped": pillar,
+        "tokens_spent": skip_cost,
+        "skip_discount_active": boss_wins >= 1
     }
 
 @app.post("/api/v1/tokens/rest-day")
@@ -588,6 +853,14 @@ def take_rest_day():
     state = USER_STORE.read()
     today_str = _get_today_str(state)
     daily_log = _ensure_daily_log(state, today_str)
+
+    current_level = state.get("level", 1)
+    current_day = state.get("current_day", 1)
+    if current_day == 5:
+        raise HTTPException(
+            status_code=400,
+            detail="Boss Level cannot be a Rest Day — the Boss waits for no one!"
+        )
 
     if state.get("tokens", 0) < 3:
         raise HTTPException(status_code=400, detail="Insufficient tokens. Full Rest-Day Pass costs 3 tokens.")
@@ -599,12 +872,28 @@ def take_rest_day():
     daily_log["nutrition_completed"] = True
     daily_log["tokens_spent_today"] = daily_log.get("tokens_spent_today", 0) + 3
 
+    # Agent-generated recovery message based on current state
+    rank = state.get("rank", 1)
+    boss_wins = state.get("boss_wins", 0)
+    recovery_tips = [
+        "Hydrate well — 2.5L of water will accelerate your recovery.",
+        "Light walking or gentle stretching still counts as active recovery.",
+        "Use this rest period to prep your meals for tomorrow.",
+        "Quality sleep tonight will accelerate muscular repair.",
+        "Mental reset: visualise your next training session going perfectly."
+    ]
+    # Cycle through tips based on rank so the message feels personalised
+    tip = recovery_tips[(rank - 1) % len(recovery_tips)]
+    boss_note = f" You have {boss_wins} Boss victory/victories behind you — rest is earned." if boss_wins > 0 else " Every champion needs rest. Tomorrow you come back stronger."
+    recovery_message = f"Rest-Day Pass activated for Rank {rank} Athlete! {tip}{boss_note}"
+
     USER_STORE.write(state)
     return {
         "status": "success",
         "remaining_tokens": state["tokens"],
-        "message": "Rest-day pass activated! Zero penalty incurred and streak preserved."
+        "message": recovery_message
     }
+
 
 @app.get("/api/v1/meal/{food_id}/overview")
 def get_meal_overview(food_id: str):
@@ -665,32 +954,37 @@ def defeat_boss():
     """Defeating the Day 5 Boss increments Rank, awards 5 tokens, advances Level."""
     state = USER_STORE.read()
     current_level = state.get("level", 1)
-    if current_level % 5 != 0:
-        raise HTTPException(status_code=400, detail="Current level is not a Boss Level.")
+    current_day = state.get("current_day", 1)
+    if current_day != 5:
+        raise HTTPException(status_code=400, detail="Not on Boss Day (Day 5). Cannot defeat boss.")
 
+    new_boss_wins = state.get("boss_wins", 0) + 1
     state["rank"] = state.get("rank", 1) + 1
-    state["boss_wins"] = state.get("boss_wins", 0) + 1
+    state["boss_wins"] = new_boss_wins
     state["tokens"] = state.get("tokens", 0) + 5
     state["xp"] = state.get("xp", 0) + 150
     state["level"] = current_level + 1
-    state["cycle_completed_days"] = 0 # reset cycle counter
+    state["current_day"] = 1  # start new cycle at Day 1
+    state["cycle_completed_days"] = 0  # reset cycle counter
+    state["re_entry_mode"] = False
 
     USER_STORE.write(state)
     return {
         "status": "victory",
         "new_rank": state["rank"],
         "new_level": state["level"],
+        "new_boss_wins": state["boss_wins"],
         "tokens": state["tokens"],
-        "message": "Boss Defeated! Athlete Rank increased and +5 tokens awarded!"
+        "message": f"Boss Defeated! Rank {state['rank']} unlocked — +5 tokens awarded!"
     }
 
 @app.post("/api/v1/test/advance-day")
 def test_advance_day():
-    """Desktop Test Mode: Advances simulated calendar day by 1."""
+    """Desktop Test Mode: Advances simulated calendar day by 1 with clean level/day progression."""
+    from datetime import timedelta
     state = USER_STORE.read()
     curr_date_str = _get_today_str(state)
     try:
-        from datetime import timedelta
         curr_d = date.fromisoformat(curr_date_str)
         next_d = curr_d + timedelta(days=1)
         next_date_str = next_d.isoformat()
@@ -698,29 +992,53 @@ def test_advance_day():
         next_date_str = date.today().isoformat()
 
     state["simulated_date"] = next_date_str
-    
-    # Check if yesterday was completed
+
+    # Check if yesterday was completed (all 3 quests or planned rest)
     yesterday_log = state.get("daily_logs", {}).get(curr_date_str, {})
     all_met = (
         yesterday_log.get("exercise_completed") and
         yesterday_log.get("mindful_completed") and
         yesterday_log.get("nutrition_completed")
     )
+    was_rest = yesterday_log.get("is_planned_rest", False)
 
-    if all_met or yesterday_log.get("is_planned_rest"):
+    re_entry_triggered = False
+
+    if all_met or was_rest:
         state["consecutive_unexcused_misses"] = 0
+        state["re_entry_mode"] = False
         state["tokens"] = state.get("tokens", 0) + 1
-        cycle_cnt = state.get("cycle_completed_days", 0) + 1
-        state["cycle_completed_days"] = cycle_cnt
-        if cycle_cnt >= 4:
-            # Advance to boss level if on day 4
-            if state.get("level", 1) % 5 != 0:
-                state["level"] = ((state.get("level", 1) // 5) * 5) + 5
+
+        current_level = state.get("level", 1)
+        # current_day is position within the 5-day cycle (1 = first quest day, 5 = boss)
+        current_day = state.get("current_day", 1)
+
+        if current_day < 5:
+            # Advance within cycle
+            state["current_day"] = current_day + 1
+            state["level"] = current_level + 1
         else:
-            state["level"] = state.get("level", 1) + 1
+            # On day 5 (Boss) — boss must be manually defeated via /boss/defeat
+            # advance-day just moves the calendar forward; leave level at boss level
+            pass
+
+        state["cycle_completed_days"] = state.get("cycle_completed_days", 0) + 1
     else:
         # Unexcused miss
-        state["consecutive_unexcused_misses"] = state.get("consecutive_unexcused_misses", 0) + 1
+        misses = state.get("consecutive_unexcused_misses", 0) + 1
+        state["consecutive_unexcused_misses"] = misses
+
+        if misses >= 3:
+            # Reset to Level 1 of the CURRENT cycle (right after last beaten Boss)
+            # Formula: cycle_start_level = boss_wins * 5 + 1
+            boss_wins = state.get("boss_wins", 0)
+            cycle_start_level = boss_wins * 5 + 1
+            state["level"] = cycle_start_level
+            state["current_day"] = 1
+            state["cycle_completed_days"] = 0
+            state["consecutive_unexcused_misses"] = 0
+            state["re_entry_mode"] = True
+            re_entry_triggered = True
 
     _ensure_daily_log(state, next_date_str)
     USER_STORE.write(state)
@@ -729,10 +1047,14 @@ def test_advance_day():
         "status": "success",
         "simulated_date": next_date_str,
         "current_level": state.get("level", 1),
+        "current_day": state.get("current_day", 1),
         "cycle_completed_days": state.get("cycle_completed_days", 0),
         "tokens": state.get("tokens", 0),
-        "consecutive_unexcused_misses": state.get("consecutive_unexcused_misses", 0)
+        "consecutive_unexcused_misses": state.get("consecutive_unexcused_misses", 0),
+        "re_entry_mode": state.get("re_entry_mode", False),
+        "re_entry_triggered": re_entry_triggered
     }
+
 
 @app.post("/api/v1/test/simulate-missed-day")
 def test_simulate_missed_day():

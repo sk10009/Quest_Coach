@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { fetchLevelToday, skipTask, activateRestDay } from '../api';
-import { Dumbbell, Brain, Apple, Sparkles, CheckCircle, Coins, ShieldAlert, FastForward } from 'lucide-react';
+import { fetchLevelToday, skipTask, activateRestDay, deleteFoodLog, deleteExerciseLog, deleteMindfulLog } from '../api';
+import { Dumbbell, Brain, Apple, Sparkles, CheckCircle, Coins, ShieldAlert, FastForward, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { motion } from 'framer-motion';
 
 export default function LevelScreen({ onOpenLogger, onOpenBoss, onRefreshState }) {
   const [levelData, setLevelData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState(null);
+  const [recoveryMessage, setRecoveryMessage] = useState(null);
 
   const loadData = async () => {
     try {
@@ -23,11 +25,12 @@ export default function LevelScreen({ onOpenLogger, onOpenBoss, onRefreshState }
     loadData();
   }, []);
 
-  const triggerConfetti = () => {
+  const triggerLimeOrbBurst = () => {
     confetti({
-      particleCount: 60,
+      particleCount: 50,
       spread: 70,
-      origin: { y: 0.6 }
+      origin: { y: 0.2 },
+      colors: ['#76B900', '#92D050', '#FFB900']
     });
   };
 
@@ -35,7 +38,7 @@ export default function LevelScreen({ onOpenLogger, onOpenBoss, onRefreshState }
     setActionError(null);
     try {
       await skipTask(pillar);
-      triggerConfetti();
+      triggerLimeOrbBurst();
       await loadData();
       if (onRefreshState) onRefreshState();
     } catch (err) {
@@ -45,13 +48,30 @@ export default function LevelScreen({ onOpenLogger, onOpenBoss, onRefreshState }
 
   const handleRestDay = async () => {
     setActionError(null);
+    setRecoveryMessage(null);
     try {
-      await activateRestDay();
-      triggerConfetti();
+      const res = await activateRestDay();
+      if (res && res.message) {
+        setRecoveryMessage(res.message);
+      }
+      triggerLimeOrbBurst();
       await loadData();
       if (onRefreshState) onRefreshState();
     } catch (err) {
       setActionError(err.message || 'Rest-day activation failed');
+    }
+  };
+
+  const handleDeleteLog = async (type, id) => {
+    try {
+      if (type === 'food') await deleteFoodLog(id);
+      if (type === 'exercise') await deleteExerciseLog(id);
+      if (type === 'mindful') await deleteMindfulLog(id);
+      await loadData();
+      if (onRefreshState) onRefreshState();
+    } catch (err) {
+      console.error(err);
+      setActionError(err.message || 'Failed to delete log entry');
     }
   };
 
@@ -68,37 +88,59 @@ export default function LevelScreen({ onOpenLogger, onOpenBoss, onRefreshState }
     }
   };
 
+  const foodLogs = levelData.food_logs || [];
+  const exerciseLogs = levelData.exercise_logs || [];
+  const mindfulLogs = levelData.mindful_logs || [];
+
   return (
     <div className="p-4 space-y-5">
       {/* Level Header */}
       <div className="flex items-center justify-between">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-indigo-400">
-            {levelData.is_boss_day ? '⚔️ Boss Encounter' : `Level ${levelData.level} Training`}
+          <span className="text-xs font-bold uppercase tracking-wider text-lime-400">
+            {levelData.is_boss_day ? '⚔️ Boss Encounter Day' : `Level ${levelData.level} Training`}
           </span>
-          <h2 className="text-lg font-bold text-white">Daily 3-Pillar Quests</h2>
+          <h2 className="text-lg font-extrabold text-white">Daily 3-Pillar Quests</h2>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
-          <Coins className="w-4 h-4" />
+        <motion.div
+          whileTap={{ scale: 0.96 }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-extrabold glow-gold"
+        >
+          <Coins className="w-4 h-4 text-amber-400" />
           <span>{levelData.tokens} Tokens</span>
-        </div>
+        </motion.div>
       </div>
 
       {actionError && (
-        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
-          <ShieldAlert className="w-4 h-4 shrink-0" />
+        <div className="p-3 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4 shrink-0 text-rose-400" />
           <span>{actionError}</span>
         </div>
       )}
 
+      {/* Custom Agent Recovery Message Banner (instead of confetti) when using 3T Rest-Day Pass */}
+      {recoveryMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/80 to-teal-950/80 border border-emerald-500/60 text-emerald-200 text-xs shadow-lg space-y-1.5"
+        >
+          <div className="flex items-center gap-2 font-bold text-emerald-300">
+            <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+            <span>Agent Recovery Intelligence</span>
+          </div>
+          <p className="leading-relaxed">{recoveryMessage}</p>
+        </motion.div>
+      )}
+
       {/* Planned Rest Day Banner */}
-      {levelData.is_planned_rest && (
-        <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+      {levelData.is_planned_rest && !recoveryMessage && (
+        <div className="p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/35 text-emerald-200 text-xs flex items-center gap-2">
           <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
           <div>
             <div className="font-bold">Planned Rest Day Active</div>
-            <div className="text-[11px] text-emerald-400/80">
-              All daily requirements forgiven. Zero drop-off penalty; streak protected.
+            <div className="text-[11px] text-emerald-300/80">
+              All daily requirements forgiven. Streak protected.
             </div>
           </div>
         </div>
@@ -106,25 +148,26 @@ export default function LevelScreen({ onOpenLogger, onOpenBoss, onRefreshState }
 
       {/* Boss Encounter Banner if Boss Day */}
       {levelData.is_boss_day && levelData.boss_challenge && (
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-950/70 to-amber-950/50 border border-rose-500/60 shadow-lg shadow-rose-950/40 space-y-2">
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-950/80 to-amber-950/70 border border-rose-500/60 shadow-lg shadow-rose-950/40 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-rose-300 px-2 py-0.5 rounded bg-rose-900/60 border border-rose-700/50">
+            <span className="text-[10px] uppercase font-extrabold tracking-wider text-rose-300 px-2.5 py-0.5 rounded-full bg-rose-900/60 border border-rose-700/50">
               Active Boss Encounter
             </span>
-            <span className="text-xs font-bold text-amber-300">Reward: +5 Tokens & +1 Rank</span>
+            <span className="text-xs font-bold text-amber-300">Reward: +5 Tokens & Rank Up</span>
           </div>
           <h3 className="text-sm font-black text-white">{levelData.boss_challenge.boss_name}</h3>
           <p className="text-xs text-slate-300">{levelData.boss_challenge.description}</p>
-          <button
+          <motion.button
+            whileTap={{ scale: 0.96 }}
             onClick={() => onOpenBoss && onOpenBoss(levelData.boss_challenge)}
-            className="w-full mt-2 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-600/30 transition-all active:scale-95"
+            className="w-full mt-2 py-3 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-extrabold text-xs shadow-md shadow-rose-600/30 transition-all glow-xbox"
           >
             Enter Boss Arena ⚔️
-          </button>
+          </motion.button>
         </div>
       )}
 
-      {/* 3 Quest Cards */}
+      {/* 3 Directly Clickable Pillar Quest Cards */}
       <div className="space-y-3">
         {levelData.quests.map((quest) => {
           const progressPercent = Math.min(
@@ -132,18 +175,23 @@ export default function LevelScreen({ onOpenLogger, onOpenBoss, onRefreshState }
             Math.round((quest.current_value / quest.target_value) * 100)
           );
 
+          const pillarLoggerType = quest.pillar === 'nutrition' ? 'food' : quest.pillar === 'exercise' ? 'exercise' : 'mindful';
+
           return (
-            <div
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
               key={quest.id}
-              className={`p-4 rounded-2xl border transition-all ${
+              onClick={() => onOpenLogger(pillarLoggerType)}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer glass-aero ${
                 quest.completed
-                  ? 'bg-emerald-950/20 border-emerald-500/40 shadow-sm'
-                  : 'bg-slate-800/60 border-slate-700/80'
+                  ? 'border-emerald-500/50 bg-emerald-950/20 shadow-emerald-900/20'
+                  : 'border-white/20 bg-slate-900/40 hover:border-lime-400/50'
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-slate-900/80 border border-slate-700/60">
+                  <div className="p-2.5 rounded-xl bg-slate-900/80 border border-white/20">
                     {getPillarIcon(quest.pillar)}
                   </div>
                   <div>
@@ -151,91 +199,128 @@ export default function LevelScreen({ onOpenLogger, onOpenBoss, onRefreshState }
                       <span>{quest.title}</span>
                       {quest.completed && <CheckCircle className="w-4 h-4 text-emerald-400" />}
                     </h3>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{quest.description}</p>
+                    <p className="text-xs text-slate-300 mt-0.5">{quest.description}</p>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <div className="text-xs font-bold text-indigo-300">+{quest.xp_reward} XP</div>
-                  {!quest.completed && !levelData.is_planned_rest && (
-                    <button
-                      onClick={() => handleSkip(quest.pillar)}
-                      className="mt-1 text-[10px] px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-semibold flex items-center gap-1 active:scale-95"
-                    >
-                      <FastForward className="w-3 h-3" />
-                      <span>Skip (1T)</span>
-                    </button>
-                  )}
+                  <div className="text-xs font-black text-lime-400">
+                    {quest.current_value} / {quest.target_value} {quest.unit}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">+{quest.xp_reward} XP</div>
                 </div>
               </div>
 
-              {/* Progress bar */}
-              <div className="mt-3.5 space-y-1">
-                <div className="flex justify-between text-[11px] text-slate-400">
-                  <span>Adherence</span>
-                  <span className="font-medium text-slate-300">
-                    {quest.current_value} / {quest.target_value} {quest.unit} ({progressPercent}%)
-                  </span>
-                </div>
-                <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden border border-slate-800">
-                  <div
-                    className={`h-full transition-all duration-500 rounded-full ${
-                      quest.completed
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
-                        : 'bg-gradient-to-r from-indigo-500 to-indigo-400'
-                    }`}
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
+              {/* Progress Bar */}
+              <div className="mt-3 w-full h-2 rounded-full bg-slate-950 border border-white/10 overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 ${
+                    quest.completed ? 'bg-emerald-400' : 'bg-gradient-to-r from-lime-500 to-sky-400'
+                  }`}
+                  style={{ width: `${progressPercent}%` }}
+                />
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
 
-      {/* Rest Day Token Action Card */}
-      {!levelData.is_planned_rest && (
-        <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-semibold text-white">Full Rest-Day Pass</div>
-            <div className="text-[10px] text-slate-400">Need recovery? Skip all tasks without streak penalty.</div>
+      {/* Rest-Day Pass & Skip Controls (Hidden on Boss Day 5) */}
+      {!levelData.is_boss_day && (
+        <div className="p-4 rounded-2xl glass-aero space-y-3">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-200">
+            <span>Athlete Assistance Passes</span>
+            <span className="text-amber-400">🪙 {levelData.tokens} Tokens Available</span>
           </div>
-          <button
-            onClick={handleRestDay}
-            className="px-3 py-1.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 text-indigo-300 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all"
-          >
-            <Coins className="w-3.5 h-3.5 text-amber-400" />
-            <span>Use Pass (3T)</span>
-          </button>
+
+          <div className="grid grid-cols-2 gap-2">
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={handleRestDay}
+              className="py-2.5 px-3 rounded-xl bg-sky-500/20 border border-sky-500/40 hover:bg-sky-500/30 text-sky-300 text-xs font-extrabold flex items-center justify-center gap-1.5 glow-aero-blue"
+            >
+              <span>Activate 3T Rest-Day</span>
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={() => handleSkip('exercise')}
+              className="py-2.5 px-3 rounded-xl bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 text-amber-300 text-xs font-extrabold flex items-center justify-center gap-1.5 glow-gold"
+            >
+              <FastForward className="w-3.5 h-3.5" />
+              <span>Skip Task (1T)</span>
+            </motion.button>
+          </div>
         </div>
       )}
 
-      {/* 3 Bottom Direct Action Buttons */}
-      <div className="pt-2 grid grid-cols-3 gap-2">
-        <button
-          onClick={() => onOpenLogger('exercise')}
-          className="p-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex flex-col items-center justify-center gap-1.5 shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
-        >
-          <Dumbbell className="w-5 h-5" />
-          <span>Log Workout</span>
-        </button>
+      {/* Logged Today Lists with Delete Buttons */}
+      {(foodLogs.length > 0 || exerciseLogs.length > 0 || mindfulLogs.length > 0) && (
+        <div className="p-4 rounded-2xl glass-aero space-y-3">
+          <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Logged Today</h3>
 
-        <button
-          onClick={() => onOpenLogger('food')}
-          className="p-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex flex-col items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all"
-        >
-          <Apple className="w-5 h-5" />
-          <span>Log Macros</span>
-        </button>
+          {foodLogs.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="text-[11px] text-emerald-400 font-bold">Nutrition & Foods</div>
+              {foodLogs.map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-white/10 text-xs">
+                  <div className="text-slate-200">
+                    <span className="font-bold">{item.name}</span> ({item.portion_g}g) · <span className="text-emerald-400">{item.calories} kcal</span>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteLog('food', item.id)}
+                    className="p-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/40 text-rose-300"
+                    title="Delete entry"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
-        <button
-          onClick={() => onOpenLogger('mindful')}
-          className="p-3 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs flex flex-col items-center justify-center gap-1.5 shadow-lg shadow-teal-600/20 active:scale-95 transition-all"
-        >
-          <Brain className="w-5 h-5" />
-          <span>Log Mindful</span>
-        </button>
-      </div>
+          {exerciseLogs.length > 0 && (
+            <div className="space-y-1.5 pt-2">
+              <div className="text-[11px] text-indigo-400 font-bold">Exercise & Training</div>
+              {exerciseLogs.map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-white/10 text-xs">
+                  <div className="text-slate-200">
+                    <span className="font-bold">{item.exercise_name}</span> ({item.duration_min}m)
+                    {item.weight_kg ? ` · ${item.weight_kg}kg × ${item.reps} reps` : ''}
+                  </div>
+                  <button
+                    onClick={() => handleDeleteLog('exercise', item.id)}
+                    className="p-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/40 text-rose-300"
+                    title="Delete entry"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {mindfulLogs.length > 0 && (
+            <div className="space-y-1.5 pt-2">
+              <div className="text-[11px] text-teal-400 font-bold">Mindful Restoration</div>
+              {mindfulLogs.map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-white/10 text-xs">
+                  <div className="text-slate-200">
+                    <span className="font-bold">{item.name}</span> ({item.duration_min} min)
+                  </div>
+                  <button
+                    onClick={() => handleDeleteLog('mindful', item.id)}
+                    className="p-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/40 text-rose-300"
+                    title="Delete entry"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

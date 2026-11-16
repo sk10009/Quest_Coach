@@ -22,3 +22,6 @@ data/user_state.json
 .idea/
 .DS_Store
 Thumbs.db
+
+.agents/
+skills-lock.json

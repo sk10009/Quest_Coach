@@ -11,7 +11,8 @@ import MealOverviewScreen from './screens/MealOverviewScreen';
 import BossLevelScreen from './screens/BossLevelScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import TestModeDrawer from './screens/TestModeDrawer';
-import { ShieldCheck, MapPin, Activity, User, Home, ArrowLeft, Terminal } from 'lucide-react';
+import { ShieldCheck, MapPin, Activity, User, Home, ArrowLeft, Terminal, Sparkles, Coins } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function App() {
   const [profile, setProfile] = useState(null);
@@ -45,8 +46,8 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="w-full max-w-[390px] min-h-[844px] bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-center">
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-[390px] min-h-[844px] glass-aero rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-center">
           <LoadingScreen />
         </div>
       </div>
@@ -56,11 +57,11 @@ export default function App() {
   // If no profile exists, show Screen 2 Profile Setup
   if (!profile) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-2">
-        <div className="w-full max-w-[390px] min-h-[844px] bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-[390px] min-h-[844px] glass-aero rounded-3xl overflow-hidden shadow-2xl">
           <ProfileSetupScreen
             onProfileCreated={(newProfile) => {
-              setProfile(newProfile);
+              setProfile({ profile: newProfile, rank: 1, level: 1, tokens: 5, xp: 0 });
               setCurrentScreen('pathway');
             }}
           />
@@ -69,57 +70,78 @@ export default function App() {
     );
   }
 
+  const currentXp = profile.xp || 0;
+  const xpNextLevel = 500;
+  const xpPercent = Math.min(100, Math.round((currentXp % xpNextLevel) / xpNextLevel * 100));
+
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-0 sm:p-4">
-      {/* 390x844px Mobile-First Frame */}
-      <div className="w-full max-w-[390px] min-h-[844px] h-[844px] bg-slate-900 border border-slate-800 sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between relative">
+    <div className="min-h-screen flex items-center justify-center p-0 sm:p-4">
+      {/* 390x844px Mobile-First Xbox 360 NXE x Frutiger Aero Frame */}
+      <div className="w-full max-w-[390px] min-h-[844px] h-[844px] glass-aero sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between relative border border-white/30">
         
-        {/* Top App Header */}
-        <header className="px-4 py-3 bg-slate-900/90 backdrop-blur border-b border-slate-800/80 flex items-center justify-between z-20">
+        {/* Floating Bokeh Orbs Background Element */}
+        <div className="absolute top-10 left-6 w-32 h-32 rounded-full bg-emerald-500/15 blur-2xl pointer-events-none" />
+        <div className="absolute bottom-20 right-6 w-40 h-40 rounded-full bg-sky-500/15 blur-2xl pointer-events-none" />
+
+        {/* Top HUD */}
+        <header className="px-4 py-3 bg-slate-900/70 backdrop-blur-md border-b border-white/20 flex items-center justify-between z-20">
           <div className="flex items-center gap-2">
             {currentScreen !== 'pathway' && (
-              <button
+              <motion.button
+                whileTap={{ scale: 0.96 }}
                 onClick={() => setCurrentScreen('pathway')}
-                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20"
               >
                 <ArrowLeft className="w-4 h-4" />
-              </button>
+              </motion.button>
             )}
-            <span className="font-extrabold text-sm tracking-tight bg-gradient-to-r from-indigo-400 to-emerald-400 bg-clip-text text-transparent">
-              QUEST COACH
-            </span>
+            <div className="flex items-center gap-1.5">
+              {/* Glowing Xbox-sphere Tiered Rank Badge */}
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-lime-600 to-emerald-400 border border-white/50 flex items-center justify-center text-white font-black text-xs glow-xbox shadow-md">
+                R{profile.rank || 1}
+              </div>
+              <div>
+                <div className="text-[10px] text-lime-400 font-bold uppercase tracking-wider">Rank Tier</div>
+                <div className="text-xs font-bold text-white">Lvl {profile.level || 1}</div>
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
-            <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-semibold">
-              R{profile.rank || 1}
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-semibold">
-              🪙 {profile.tokens ?? 5}
-            </span>
-            <button
+          {/* XP Bar & Token Counter */}
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col items-end">
+              <div className="text-[9px] text-slate-300 font-semibold">{currentXp} XP</div>
+              <div className="w-16 h-1.5 rounded-full bg-slate-800 border border-white/20 overflow-hidden mt-0.5">
+                <div className="h-full bg-gradient-to-r from-lime-500 to-emerald-400" style={{ width: `${xpPercent}%` }} />
+              </div>
+            </div>
+
+            <motion.div
+              whileTap={{ scale: 0.96 }}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-extrabold glow-gold"
+            >
+              <Coins className="w-3.5 h-3.5 text-amber-400" />
+              <span>{profile.tokens ?? 5}</span>
+            </motion.div>
+
+            <motion.button
+              whileTap={{ scale: 0.96 }}
               onClick={() => setIsDrawerOpen(true)}
               title="Open Test Mode Drawer"
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400"
+              className="p-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 glow-aero-blue"
             >
               <Terminal className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setCurrentScreen(currentScreen === 'profile' ? 'pathway' : 'profile')}
-              title="Profile"
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300"
-            >
-              <User className="w-4 h-4" />
-            </button>
+            </motion.button>
           </div>
         </header>
 
         {/* Scrollable Viewport Content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto z-10">
           {currentScreen === 'pathway' && (
             <LevelPathwayScreen
               profileData={profile}
               onSelectLevel={() => setCurrentScreen('level')}
+              onOpenProfile={() => setCurrentScreen('profile')}
             />
           )}
 
@@ -153,6 +175,7 @@ export default function App() {
             <ProfileScreen
               profile={profile}
               onClose={() => setCurrentScreen('pathway')}
+              onRefreshState={refreshState}
             />
           )}
 
@@ -203,39 +226,41 @@ export default function App() {
         />
 
         {/* Bottom Navigation */}
-        <nav className="px-4 py-2 bg-slate-900/90 backdrop-blur border-t border-slate-800/80 flex items-center justify-around z-20">
-          <button
+        <nav className="px-4 py-2 bg-slate-900/80 backdrop-blur-md border-t border-white/20 flex items-center justify-around z-20">
+          <motion.button
+            whileTap={{ scale: 0.96 }}
             onClick={() => setCurrentScreen('pathway')}
-            className={`flex flex-col items-center gap-1 text-[11px] font-medium transition-colors ${
-              currentScreen === 'pathway' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
+            className={`flex flex-col items-center gap-1 text-[11px] font-bold transition-colors ${
+              currentScreen === 'pathway' ? 'text-lime-400' : 'text-slate-400 hover:text-white'
             }`}
           >
             <Home className="w-4 h-4" />
             <span>Pathway</span>
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileTap={{ scale: 0.96 }}
             onClick={() => setCurrentScreen('level')}
-            className={`flex flex-col items-center gap-1 text-[11px] font-medium transition-colors ${
-              currentScreen === 'level' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
+            className={`flex flex-col items-center gap-1 text-[11px] font-bold transition-colors ${
+              currentScreen === 'level' ? 'text-lime-400' : 'text-slate-400 hover:text-white'
             }`}
           >
             <Activity className="w-4 h-4" />
-            <span>Today's Quest</span>
-          </button>
+            <span>Today's Quests</span>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileTap={{ scale: 0.96 }}
             onClick={() => setCurrentScreen('profile')}
-            className={`flex flex-col items-center gap-1 text-[11px] font-medium transition-colors ${
-              currentScreen === 'profile' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
+            className={`flex flex-col items-center gap-1 text-[11px] font-bold transition-colors ${
+              currentScreen === 'profile' ? 'text-lime-400' : 'text-slate-400 hover:text-white'
             }`}
           >
             <User className="w-4 h-4" />
             <span>Profile</span>
-          </button>
+          </motion.button>
         </nav>
       </div>
     </div>
   );
 }
-
